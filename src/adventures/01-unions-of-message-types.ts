@@ -40,11 +40,14 @@ type Message =
  * the message spec is only tangential to the shiny new feature we're
  * implementing. */
 
-const stringMessage: Message = { label: 'rename', content: 'Foo' }
-const numberMessage: Message = { label: 'count', content: 19 }
-// @ts-expect-error TS alerts us of the mismatched label and content.
+const stringyMessage: Message = { label: 'rename', content: 'Foo' }
+
+const numberyMessage: Message = { label: 'count', content: 19 }
+
+// Typescript alerts us of the mismatched label and content.
 const wrongMessage1: Message = { label: 'rename', content: 19 }
-// @ts-expect-error We're also defended against regular old label typos.
+
+// We're also defended against regular old label typos.
 const wrongMessage2: Message = { label: 'remane', content: 'Bar' }
 
 /* Things are going pretty well! We've successfully defined the space of
@@ -109,8 +112,10 @@ function sendMessage({ label, content }: Message) {
 
 // Typescript ensures we pass only well formed messages as the argument. 
 sendMessage({ label: 'rename', content: 'foo' });
+
 sendMessage({ label: 'count', content: 2 });
-// @ts-expect-error Typescript catches the mismatched label and content.
+
+// Typescript catches the mismatched label and content.
 sendMessage({ label: 'rename', content: 2 });
 
 /* However, we have to write `label:` and `content:` every time we call
@@ -136,7 +141,7 @@ function sendMessageSplit(
       send({ method: 'rename', id: '0xB120', record: content ?? '' });
       break;
     case 'count':
-      // @ts-expect-error Suddenly TS can't infer the type of content.
+      // Suddenly typescript can't infer the type of content.
       send({ method: 'updateCount', count: (content ?? 0) * 1000 });
       break;
     default:
@@ -147,21 +152,21 @@ function sendMessageSplit(
 // This is much easier on the eyes.
 sendMessageSplit('rename', 'foo');
 
-// And look, default arguments! But wait...
+// And look, default arguments!
 sendMessageSplit('rename');
 
-// >:| Typescript lets us mismatch the label and content.
-sendMessageSplit('rename', 2);
-
-// @ts-expect-error It will still catch typos, though,
+// We're catching typos as intended,
 sendMessageSplit('cunt', 41);
 
-// @ts-expect-error and types not valid to *any* message.
+// And rejecting types not valid to *any* message. But wait...
 sendMessageSplit('count', true);
 
-/* What happened? Our once trusty typescript is no longer sounding the
- * alarm when we pass malformed messages to our function. But there is
- * an explanation, and it involves a 2x2 matrix. (!)
+// Typescript lets us mismatch the label and content >:|
+sendMessageSplit('rename', 2);
+
+/* ...What happened? Our once trusty typescript is no longer sounding
+ * the alarm when we pass malformed messages to our function. But there
+ * is an explanation, and it involves a 2x2 matrix. (!)
  * 
  * Let:
  *   R0 = Rename['method'], R1 = Rename['content'],
@@ -204,7 +209,7 @@ function sendMessageSplitWithTemplate<MessageType extends Message>(
       send({ method: 'rename', id: '0xB120', record: content });
       break;
     case 'count':
-      // @ts-expect-error Typescript can't infer the type of content.
+      // Typescript can't infer the type of content.
       send({ method: 'updateCount', count: content * 1000 });
       break;
     default:
@@ -212,16 +217,16 @@ function sendMessageSplitWithTemplate<MessageType extends Message>(
   }
 }
 
-// And just as before,
+// Yet just as before,
 sendMessageSplitWithTemplate('rename', 'foo');
 
 // typescript lets us mismatch the label and content,
 sendMessageSplitWithTemplate('rename', 2);
 
-// @ts-expect-error though it will still catch typos
+// though it will still catch typos
 sendMessageSplitWithTemplate('cunt', 41);
 
-// @ts-expect-error and types not valid to *any* message.
+// and types not valid to *any* message.
 sendMessageSplitWithTemplate('count', true);
 
 /* Well that didn't work. Typescript still doesn't infer the content
@@ -284,7 +289,7 @@ const sendMessageWithInterface: SendMessageInterface =
       break;
     case 'count':
       // What the heck!?
-      // @ts-expect-error TS still can't infer the type of content.
+      // Typescript still can't infer the type of content.
       send({ method: 'updateCount', count: content * 1000 });
       break;
     default:
@@ -294,12 +299,17 @@ const sendMessageWithInterface: SendMessageInterface =
 
 // The lack of inference inside the function body notwithstanding,
 sendMessageWithInterface('rename', 'foo');
-// @ts-expect-error Typescript now picks up on the mismatched types,
+
+// Typescript now picks up on the mismatched types,
 sendMessageWithInterface('rename', 2);
+
+// and lets us have an optional argument
 sendMessageWithInterface('rename');
-// @ts-expect-error including conditional argument optionality (!), 
+
+// dependent upon the type of the first argument (!), 
 sendMessageWithInterface('count');
-// @ts-expect-error and still catching the usual typos.
+
+// while still catching the usual typos.
 sendMessageWithInterface('remane', 'foo');
 
 /* Our interface approach yields mixed success. We have the downside of
@@ -354,10 +364,17 @@ const sendMessage10x: SendMessageInterface =
   }
 }
 
-// @ts-expect-error Typescript is picking up on the mismatched types,
+// When we try to call our function, typescript detecs mismatched types
 sendMessage10x('rename', 2);
-// @ts-expect-error as well as the usual typos.
+
+// as well as the usual typos.
 sendMessage10x('remane', 'foo');
+
+// And because we used an interface, we can still have default arguments
+sendMessage10x('rename');
+
+// dependent on the type of the first argument.
+sendMessage10x('count');
 
 /* Well, it's just about as good as we could ask for. But why the weird
  * renaming line at the top of the declaration?
@@ -380,25 +397,23 @@ sendMessage10x('remane', 'foo');
  * 
  * Importantly, reassigning a variable with a type assertion does not
  * change the type that the variable was assigned when it entered scope,
- * and assertions made later in the scope that logically assert the type
+ * and assertions made later in the scope that logically imply the type
  * of a variable do not propagate.
+ * 
+ * It is a counterintuitive behavior if you are accustomed to languages
+ * which are either declaratively typed or not typed at all. To assist
+ * recall of this typescript quirk, I offer one maxim and one poem.
  * 
  * The cost of a long lived type assertion is a new name. */
 
-const isMessage = (message: unknown): message is Message => true;
-
-const sendMessage0x: SendMessageInterface =
+const poem: SendMessageInterface =
   (label, content) => 
 {
-  if (!isMessage({ label, content }) ) {
-    throw new Error('not a message');
-  }
-
   // Though we may try in vain
   const message = { label, content } as Message;
   // to give new types to old names,
   label = message.label;
-  // Without scoped narrowers,
+  // If we assert outside of scoped narrowers,
   content = message.content;
 
   switch (label) {
@@ -406,7 +421,7 @@ const sendMessage0x: SendMessageInterface =
       send({ method: 'rename', id: '0xB120', record: content });
       break;
     case 'count':
-      // @ts-expect-errors
+      // We should @ts-expect-errors.
       send({ method: 'updateCount', count: content * 1000 });
       break;
     default:
