@@ -3,7 +3,7 @@ Where typescript tangles go to die.
 
 ## Getting started
 
-Intended to be consumed from your IDE with typescript hovering over you.
+Intended to be consumed from your IDE, with typescript hovering over you.
 
 #### Install yarn
 ```sh
